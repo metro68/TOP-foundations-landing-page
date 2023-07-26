@@ -1,0 +1,120 @@
+To set up a WebSocket server to run some Python code that takes input and returns JSON data to a React TypeScript app, you can use a combination of Python libraries for WebSocket communication and a WebSocket client in your React app.
+
+Here's a step-by-step guide on how to achieve this:
+
+1. Set up a Python WebSocket server:
+   Use a Python WebSocket library like `websockets` to create the WebSocket server. Install the required library:
+
+```bash
+pip install websockets
+```
+
+Now, create a Python script (e.g., `websocket_server.py`) for the WebSocket server:
+
+```python
+import asyncio
+import websockets
+import json
+
+async def run_python_code(input_variable):
+    # Replace this with your actual Python code that processes the input variable
+    # For demonstration purposes, we'll return some example JSON data
+    result_data = {
+        "message": f"Received input: {input_variable}",
+        "data": [1, 2, 3, 4, 5]
+    }
+    return json.dumps(result_data)
+
+async def websocket_handler(websocket, path):
+    async for message in websocket:
+        try:
+            input_variable = json.loads(message)
+            result = await run_python_code(input_variable)
+            await websocket.send(result)
+        except Exception as e:
+            error_message = {"error": str(e)}
+            await websocket.send(json.dumps(error_message))
+
+if __name__ == "__main__":
+    server = websockets.serve(websocket_handler, "localhost", 8000)
+    asyncio.get_event_loop().run_until_complete(server)
+    asyncio.get_event_loop().run_forever()
+```
+
+This WebSocket server will listen on `localhost:8000` and process incoming messages (JSON format) containing the input variable. It then calls the `run_python_code` function to execute the Python code with the input, and the result is sent back as JSON data via the WebSocket connection.
+
+2. Set up a React TypeScript app with a WebSocket client:
+   In your React app, you'll need to use the `WebSocket` API to establish a WebSocket connection to the Python server and send and receive messages. Create a new TypeScript file (e.g., `WebSocketClient.ts`) for the WebSocket client:
+
+```tsx
+// WebSocketClient.ts
+export interface WebSocketMessage {
+  // Define the structure of the JSON messages exchanged with the server
+  input: string; // Change this according to your input data structure
+}
+
+export const connectWebSocket = (onMessageReceived: (data: any) => void) => {
+  const socket = new WebSocket('ws://localhost:8000');
+
+  socket.onopen = () => {
+    console.log('WebSocket connection established');
+  };
+
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    onMessageReceived(data);
+  };
+
+  socket.onclose = () => {
+    console.log('WebSocket connection closed');
+  };
+
+  return socket;
+};
+```
+
+3. Use the WebSocket client in your React components:
+   In your React components, use the `connectWebSocket` function to establish a WebSocket connection and send and receive messages. Update the input variable and handle the received JSON data accordingly.
+
+```tsx
+import React, { useState } from 'react';
+import { connectWebSocket, WebSocketMessage } from './WebSocketClient';
+
+const MyComponent: React.FC = () => {
+  const [inputValue, setInputValue] = useState('');
+  const [resultData, setResultData] = useState<any | null>(null);
+
+  const handleSendRequest = () => {
+    const message: WebSocketMessage = { input: inputValue };
+    const socket = connectWebSocket((data) => setResultData(data));
+    socket.send(JSON.stringify(message));
+  };
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+      />
+      <button onClick={handleSendRequest}>Send Request</button>
+
+      {/* Display the result data */}
+      {resultData && (
+        <div>
+          <h3>Result:</h3>
+          <pre>{JSON.stringify(resultData, null, 2)}</pre>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MyComponent;
+```
+
+In this React component, the `handleSendRequest` function establishes a WebSocket connection using the `connectWebSocket` function and sends the input data as a JSON message. When the WebSocket server processes the message and sends back the result, the `onMessageReceived` callback updates the `resultData` state, which triggers a re-render and displays the received JSON data on the page.
+
+Make sure to replace the example Python code in `websocket_server.py` with your actual Python code to process the input variable and generate the desired JSON data. Also, adapt the data structure of the WebSocket messages according to your needs in both the WebSocket server and the WebSocket client.
+
+Remember to run the Python WebSocket server script (`websocket_server.py`) using `python websocket_server.py`, and start your React app using `npm start` to see the WebSocket communication in action.
