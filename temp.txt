@@ -120,3 +120,80 @@ This will start your React development server, and you should see the WebSocket 
 With these steps, you'll have a WebSocket server running and a WebSocket client set up in your React application. The server will listen for incoming connections and log messages received, while the client will establish a connection to the server and send messages when triggered.
 
 Feel free to customize the code to fit your specific requirements and UI. If you have any further questions, please let me know!
+
+
+
+import React from 'react';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+
+interface ContextMenuProps {
+  anchorEl: HTMLElement | null;
+  open: boolean;
+  onClose: () => void;
+  options: string[];
+  onOptionClick: (option: string) => void;
+}
+
+const ContextMenu: React.FC<ContextMenuProps> = ({ anchorEl, open, onClose, options, onOptionClick }) => {
+  return (
+    <Menu anchorEl={anchorEl} open={open} onClose={onClose} keepMounted>
+      {options.map((option) => (
+        <MenuItem key={option} onClick={() => onOptionClick(option)}>
+          {option}
+        </MenuItem>
+      ))}
+    </Menu>
+  );
+};
+
+export default ContextMenu;
+
+
+
+import React, { useState } from 'react';
+import IconButton from '@mui/material/IconButton';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ContextMenu from '../components/ContextMenu';
+
+const MyComponent: React.FC = () => {
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleOptionClick = (option: string) => {
+    // Common action for most options
+    console.log(`Selected option: ${option}`);
+
+    // Handle a specific action for a particular option
+    if (option === 'Special Option') {
+      console.log('Special option was clicked!');
+      // Do something special...
+    }
+
+    handleClose();
+  };
+
+  const contextMenuOptions = ['Option 1', 'Option 2', 'Option 3', 'Special Option'];
+
+  return (
+    <div>
+      {/* IconButton that opens the context menu on click */}
+      <IconButton onClick={handleClick}>
+        <MoreVertIcon />
+      </IconButton>
+
+      {/* Reusable ContextMenu */}
+      <ContextMenu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleClose} options={contextMenuOptions} onOptionClick={handleOptionClick} />
+    </div>
+  );
+};
+
+export default MyComponent;
+
