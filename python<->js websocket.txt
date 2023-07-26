@@ -118,3 +118,79 @@ In this React component, the `handleSendRequest` function establishes a WebSocke
 Make sure to replace the example Python code in `websocket_server.py` with your actual Python code to process the input variable and generate the desired JSON data. Also, adapt the data structure of the WebSocket messages according to your needs in both the WebSocket server and the WebSocket client.
 
 Remember to run the Python WebSocket server script (`websocket_server.py`) using `python websocket_server.py`, and start your React app using `npm start` to see the WebSocket communication in action.
+
+
+
+To run Python code in a specific kernel, you'll need to use a Python library that provides access to Jupyter kernels and allows you to execute code in a selected kernel. One such library is `jupyter_client`. Here's how you can modify the WebSocket server to run the Python code in a specific kernel:
+
+1. Install the required library:
+   Install the `jupyter_client` library, which provides the necessary functionality to execute Python code in Jupyter kernels.
+
+```bash
+pip install jupyter_client
+```
+
+2. Modify the WebSocket server to use a specific kernel:
+   Update the Python WebSocket server script (`websocket_server.py`) to use the `jupyter_client` library to run the Python code in a specific Jupyter kernel.
+
+```python
+import asyncio
+import websockets
+import json
+from jupyter_client import KernelManager
+
+async def run_python_code_in_kernel(input_variable, kernel_name):
+    # Create a kernel manager for the specific kernel
+    km = KernelManager(kernel_name=kernel_name)
+    km.start_kernel()
+
+    # Create a new session for the kernel
+    kc = km.client()
+    kc.start_channels()
+
+    # Prepare the code to be executed
+    code = f'''
+    # Your Python code that uses the input_variable
+    # For demonstration purposes, we'll return some example JSON data
+    result_data = {{
+        "message": f"Received input: {input_variable}",
+        "data": [1, 2, 3, 4, 5]
+    }}
+    '''
+
+    # Execute the code in the kernel
+    msg_id = kc.execute(code)
+
+    # Wait for the execution to complete and get the result
+    while True:
+        msg = kc.get_iopub_msg(timeout=1)
+        if msg['parent_header']['msg_id'] == msg_id:
+            if msg['msg_type'] == 'execute_result':
+                result = msg['content']['data']['text/plain']
+                kc.stop_channels()
+                km.shutdown_kernel()
+                return result
+
+async def websocket_handler(websocket, path):
+    async for message in websocket:
+        try:
+            input_variable = json.loads(message)
+            # Specify the desired kernel name (e.g., "python3")
+            kernel_name = "python3"
+            result = await run_python_code_in_kernel(input_variable, kernel_name)
+            await websocket.send(result)
+        except Exception as e:
+            error_message = {"error": str(e)}
+            await websocket.send(json.dumps(error_message))
+
+if __name__ == "__main__":
+    server = websockets.serve(websocket_handler, "localhost", 8000)
+    asyncio.get_event_loop().run_until_complete(server)
+    asyncio.get_event_loop().run_forever()
+```
+
+In this modified WebSocket server, the `run_python_code_in_kernel` function uses the `jupyter_client` library to create a kernel manager and execute the Python code in the specified kernel. This allows you to run the Python code in a specific environment, which can be useful when you have multiple Jupyter kernels with different configurations and dependencies.
+
+You'll need to replace the example Python code in `run_python_code_in_kernel` with your actual Python code to process the input variable and generate the desired JSON data. Additionally, make sure you have Jupyter kernels with the desired names (e.g., "python3") installed on your system, or you can create a new kernel with the desired configuration.
+
+Remember to run the Python WebSocket server script (`websocket_server.py`) using `python websocket_server.py`, and start your React app using `npm start` to see the WebSocket communication using the specific Python kernel.
