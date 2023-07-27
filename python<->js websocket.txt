@@ -1,3 +1,161 @@
+To achieve your goal of running Python code on the server side with Next.js using websockets and passing input variables to the Python code, you can follow these steps:
+
+1. Set up a Python backend server that will handle the execution of the Python code.
+2. Create a Next.js frontend application to interact with the Python backend using websockets.
+
+Here's a step-by-step guide with code samples to achieve this:
+
+Step 1: Set up the Python backend server
+First, you need to create a Python backend server that listens for incoming websocket connections, receives input from the frontend, runs the Python code with the specified IPython kernel, and returns the JSON output back to the frontend.
+
+1. Install the required Python packages. You'll need the `websockets` and `ipykernel` packages. You can install them using pip:
+
+```bash
+pip install websockets ipykernel
+```
+
+2. Create a Python script (e.g., `websocket_server.py`) with the following code:
+
+```python
+import asyncio
+import websockets
+import json
+from IPython import get_ipython
+
+async def execute_python_code(data):
+    # Get the kernel name from the frontend
+    kernel_name = data.get('kernel', 'python3')
+    
+    # Get the Python code from the frontend
+    code = data.get('code', '')
+    
+    # Execute the code using IPython kernel
+    with get_ipython().kernel_manager.start_kernel(kernel_name) as kernel:
+        # Execute the code and capture the stdout
+        code_output = kernel.execute(code, allow_stdin=False, silent=True)
+        result = code_output.get('content', {}).get('text', '')
+        
+    # Return the result as JSON
+    return json.dumps({'result': result})
+
+async def handle_websocket(websocket, path):
+    async for message in websocket:
+        data = json.loads(message)
+        result = await execute_python_code(data)
+        await websocket.send(result)
+
+# Start the websocket server
+async def start_server():
+    server = await websockets.serve(handle_websocket, "localhost", 8765)
+    print("WebSocket server started")
+    await server.wait_closed()
+
+# Run the event loop
+asyncio.get_event_loop().run_until_complete(start_server())
+```
+
+Step 2: Create the Next.js frontend application
+Now, let's create a Next.js frontend application that connects to the Python backend using websockets and allows users to input variables and execute Python code.
+
+1. Set up a new Next.js project:
+
+```bash
+npx create-next-app my-python-app
+cd my-python-app
+```
+
+2. Install required dependencies:
+
+```bash
+npm install websocket
+```
+
+3. Create a new component for the frontend (e.g., `PythonCodeExecutor.tsx`) with the following code:
+
+```tsx
+import React, { useState } from 'react';
+import WebSocket from 'websocket';
+
+const PythonCodeExecutor: React.FC = () => {
+  const [output, setOutput] = useState('');
+
+  const handleRunPythonCode = async () => {
+    const code = 'print("Hello, World!")'; // You can use any Python code here
+
+    const data = {
+      code,
+      kernel: 'python3', // Specify the IPython kernel you want to use
+    };
+
+    const ws = new WebSocket('ws://localhost:8765');
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      ws.send(JSON.stringify(data));
+    };
+
+    ws.onmessage = (event) => {
+      const result = JSON.parse(event.data).result;
+      setOutput(result);
+      ws.close();
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket closed');
+    };
+  };
+
+  return (
+    <div>
+      <button onClick={handleRunPythonCode}>Run Python Code</button>
+      <pre>{output}</pre>
+    </div>
+  );
+};
+
+export default PythonCodeExecutor;
+```
+
+4. Modify the `pages/index.tsx` file to use the `PythonCodeExecutor` component:
+
+```tsx
+import React from 'react';
+import PythonCodeExecutor from '../components/PythonCodeExecutor';
+
+const Home: React.FC = () => {
+  return (
+    <div>
+      <h1>Python Code Executor</h1>
+      <PythonCodeExecutor />
+    </div>
+  );
+};
+
+export default Home;
+```
+
+Step 3: Run the Application
+Now, you can run both the Python backend server and the Next.js frontend application.
+
+1. Run the Python backend server:
+
+```bash
+python websocket_server.py
+```
+
+2. Run the Next.js frontend application:
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000` in your browser, and you should see a "Run Python Code" button. When you click the button, the Python code will be executed on the backend using the specified IPython kernel, and the result will be displayed on the frontend.
+
+Keep in mind that this is a basic example, and you can modify the Python code and frontend component to handle more complex interactions and Python scripts as needed. Additionally, ensure that your backend server and frontend application are running on the same machine or accessible via the same network if you're deploying the application to a server.
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 To set up a WebSocket server to run some Python code that takes input and returns JSON data to a React TypeScript app, you can use a combination of Python libraries for WebSocket communication and a WebSocket client in your React app.
 
 Here's a step-by-step guide on how to achieve this:
