@@ -1,3 +1,124 @@
+Apologies for the oversight. You are right; I didn't pass the input variable in the previous response. Let's update the code to correctly pass the input variable from the frontend to the Python backend.
+
+Step 1: Modify the Python backend server
+In the `execute_python_code` function of `websocket_server.py`, we'll get the `input_variable` from the frontend and include it in the code.
+
+Update the `websocket_server.py` as follows:
+
+```python
+import asyncio
+import websockets
+import json
+from IPython import get_ipython
+
+async def execute_python_code(data):
+    # Get the input variable from the frontend
+    input_variable = data.get('input_variable', '')
+
+    # Prepare the Python code with the input variable
+    code = f'''
+import json
+
+# Function to be executed
+def my_function():
+    # Your fixed Python code
+    result = "Hello, " + {json.dumps(input_variable)}
+    return result
+
+# Call the function and get the result
+result = my_function()
+result_json = json.dumps({{'result': result}})
+result_json
+'''
+
+    # Execute the code using the "black" IPython kernel
+    with get_ipython().kernel_manager.start_kernel("black") as kernel:
+        # Execute the code and capture the stdout
+        code_output = kernel.execute(code, allow_stdin=False, silent=True)
+        result = code_output.get('content', {}).get('text', '')
+
+    # Return the result as JSON
+    return result
+
+# Rest of the code remains the same
+# ...
+```
+
+Step 2: Modify the Next.js frontend application
+In the `PythonCodeExecutor.tsx` component, we'll update the `handleRunPythonCode` function to include the `input_variable` in the data sent to the Python backend.
+
+Update the `PythonCodeExecutor.tsx` as follows:
+
+```tsx
+import React, { useState } from 'react';
+import WebSocket from 'websocket';
+
+const PythonCodeExecutor: React.FC = () => {
+  const [inputVariable, setInputVariable] = useState<string>('');
+
+  const handleRunPythonCode = async () => {
+    const data = {
+      input_variable: inputVariable,
+      kernel: 'black', // Use the "black" IPython kernel
+    };
+
+    const ws = new WebSocket('ws://localhost:8765');
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      ws.send(JSON.stringify(data));
+    };
+
+    ws.onmessage = (event) => {
+      const result = JSON.parse(event.data).result;
+      setOutput(result);
+      ws.close();
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket closed');
+    };
+  };
+
+  return (
+    <div>
+      <div>
+        <label>
+          Input Variable:
+          <input type="text" value={inputVariable} onChange={(e) => setInputVariable(e.target.value)} />
+        </label>
+      </div>
+      <div>
+        <button onClick={handleRunPythonCode}>Run Python Code</button>
+      </div>
+      <pre>{output}</pre>
+    </div>
+  );
+};
+
+export default PythonCodeExecutor;
+```
+
+Step 3: Run the Application
+Run both the Python backend server and the Next.js frontend application as before.
+
+Now, when you visit `http://localhost:3000` in your browser, you'll see an input field for the 'druwh4h5j' variable. Enter a value for this variable, click the "Run Python Code" button, and the Python code on the backend will execute with the provided input variable. The result will be displayed on the frontend.
+
+Ensure that the backend server and frontend application are running on the same machine or accessible via the same network for the websocket communication to work correctly.
+
+
+
+
+
+=======================================================================================================================================================================
+
+
+
+
+
+
+
+
+
 To achieve your goal of running Python code on the server side with Next.js using websockets and passing input variables to the Python code, you can follow these steps:
 
 1. Set up a Python backend server that will handle the execution of the Python code.
