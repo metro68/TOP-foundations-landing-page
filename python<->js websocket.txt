@@ -42,6 +42,22 @@ result_json
 
 # Rest of the code remains the same
 # ...
+async def handle_websocket(websocket, path):
+    async for message in websocket:
+        data = json.loads(message)
+        result = await execute_python_code(data)
+        await websocket.send(result)
+
+# Start the websocket server
+async def start_server():
+    server = await websockets.serve(handle_websocket, "localhost", 8765)
+    print("WebSocket server started")
+    await server.wait_closed()
+
+# Run the event loop
+asyncio.get_event_loop().run_until_complete(start_server())
+
+
 ```
 
 Step 2: Modify the Next.js frontend application
