@@ -1,0 +1,135 @@
+
+
+
+code that works without kernel specify
+
+
+// https://jupyter-kernel-gateway.readthedocs.io/en/latest/getting-started.html --- jupyter kernel
+
+import React, { useState } from 'react';
+
+const PythonCodeExecutor: React.FC = () => {
+  const [num1, setNum1] = useState<number>(0);
+  const [num2, setNum2] = useState<number>(0);
+  const [output, setOutput] = useState<string>('');
+
+  const handleRunPythonCode = async () => {
+    const inputVariables = { num1, num2 };
+
+    const data = {
+      input_variables: inputVariables,
+      kernel: 'python3', // Specify the IPython kernel you want to use
+    };
+
+    const ws = new WebSocket('ws://localhost:8765');
+    ws.onopen = () => {
+      console.log('WebSocket connected', JSON.stringify(data));
+      ws.send(JSON.stringify(data));
+    };
+
+    ws.onmessage = (event) => {
+      const result = JSON.parse(event.data).result;
+      setOutput(result);
+      ws.close();
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket closed');
+    };
+  };
+
+  return (
+    <div>
+      <div>
+        <label>
+          Num1:
+          <input type="number" value={num1} onChange={(e) => setNum1(parseInt(e.target.value))} />
+        </label>
+      </div>
+      <div>
+        <label>
+          Num2:
+          <input type="number" value={num2} onChange={(e) => setNum2(parseInt(e.target.value))} />
+        </label>
+      </div>
+      <div>
+        <button onClick={handleRunPythonCode}>Run Python Code</button>
+      </div>
+      <pre>{output}</pre>
+    </div>
+  );
+};
+
+export default PythonCodeExecutor;
+
+
+
+
+
+
+
+
+
+
+
+
+server.py
+
+import asyncio
+import websockets
+import json
+from IPython import get_ipython
+
+async def execute_python_code(data):
+    # Get the kernel name from the frontend
+    kernel_name = data.get('kernel', 'python3')
+    
+    # Get the input variables from the frontend
+    input_variables = data.get('input_variables', {})
+    
+    # Prepare the Python code with the input variables
+    code = f'''
+import json
+
+# Function to be executed
+def my_function(input_variables):
+    # Your fixed Python code
+    # Example: calculating the sum of two numbers
+    result = input_variables['num1'] + input_variables['num2']
+    return result
+
+# Call the function and get the result
+result = my_function({json.dumps(input_variables)})
+result_json = json.dumps({{'result': result}})
+result_json
+'''
+    
+    # Execute the code using IPython kernel
+    with get_ipython().kernel_manager.start_kernel(kernel_name) as kernel:
+        # Execute the code and capture the stdout
+        code_output = kernel.execute(code, allow_stdin=False, silent=True)
+        result = code_output.get('content', {}).get('text', '')
+        
+    # Return the result as JSON
+    return result
+
+async def handle_websocket(websocket, path):
+    async for message in websocket:
+        data = json.loads(message)
+        result = await execute_python_code(data)
+        await websocket.send(result)
+
+# Start the websocket server
+async def start_server():
+    server = await websockets.serve(handle_websocket, "localhost", 8765)
+    print("WebSocket server started")
+    await server.wait_closed()
+
+# Run the event loop
+asyncio.get_event_loop().run_until_complete(start_server())
+
+
+
+in app
+
+<YourComponent />
