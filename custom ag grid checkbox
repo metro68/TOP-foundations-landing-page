@@ -1,0 +1,144 @@
+Certainly! Here's the complete code with everything put together, including the header checkbox with three states, cell checkboxes, and handling the POST call to update the checkbox state in the API:
+
+```tsx
+import React, { useState } from 'react';
+import { AgGridReact } from 'ag-grid-react';
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-alpine.css';
+import axios from 'axios'; // You need to install axios if not already done
+
+const MyGridComponent: React.FC = () => {
+  const columnDefs = [
+    {
+      headerName: ' ',
+      field: 'checkbox',
+      headerComponentFramework: HeaderCheckbox,
+      cellRendererFramework: CheckboxRenderer,
+      cellEditorFramework: CheckboxEditor,
+    },
+    // ...other column definitions...
+  ];
+
+  const [headerCheckboxState, setHeaderCheckboxState] = useState<boolean | 'indeterminate'>(
+    false
+  );
+
+  const rowData = [
+    // ...your row data...
+  ];
+
+  const handleHeaderCheckboxChange = (column: any, checked: boolean | 'indeterminate') => {
+    setHeaderCheckboxState(checked);
+
+    // Update the state of all checkboxes in the column
+    const updatedRowData = rowData.map((row) => ({
+      ...row,
+      checkbox: checked,
+    }));
+
+    // Make POST call to update the API for all checkboxes in the column
+    axios.post('your-api-url', updatedRowData).then((response) => {
+      console.log('API response:', response);
+    });
+  };
+
+  return (
+    <div className="ag-theme-alpine" style={{ height: 400, width: 600 }}>
+      <AgGridReact
+        columnDefs={columnDefs}
+        rowData={rowData}
+        frameworkComponents={{ headerCheckbox: HeaderCheckbox }}
+        headerHeight={40}
+        domLayout='autoHeight'
+        context={{ setHeaderCheckboxState: handleHeaderCheckboxChange }}
+      >
+        {/* ...other AgGridReact configuration */}
+      </AgGridReact>
+    </div>
+  );
+};
+
+// Custom header checkbox component
+const HeaderCheckbox: React.FC<any> = ({ setHeaderCheckboxState, column }) => {
+  const [checkboxState, setCheckboxState] = useState(false);
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    setCheckboxState(newValue);
+
+    if (!newValue) {
+      setHeaderCheckboxState(column, 'indeterminate');
+    } else {
+      const allChecked = rowData.every((row) => row.checkbox);
+      setHeaderCheckboxState(column, allChecked);
+    }
+  };
+
+  return (
+    <input
+      type="checkbox"
+      checked={checkboxState}
+      onChange={handleCheckboxChange}
+      ref={(input) => {
+        if (input) {
+          input.indeterminate = checkboxState === 'indeterminate';
+        }
+      }}
+    />
+  );
+};
+
+// Custom cell renderer component for rendering checkboxes
+const CheckboxRenderer: React.FC<any> = ({ value }) => {
+  return <input type="checkbox" checked={value} disabled />;
+};
+
+// Custom cell editor component for editing checkboxes
+class CheckboxEditor extends React.Component<any, any> {
+  constructor(props: any) {
+    super(props);
+
+    this.state = {
+      value: this.props.value,
+    };
+  }
+
+  getValue() {
+    return this.state.value;
+  }
+
+  isPopup() {
+    return true;
+  }
+
+  handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    this.setState({ value: newValue });
+    if (!newValue) {
+      // Make your POST request to update the API here
+      const updatedRowData = this.props.node.data;
+      axios.post('your-api-url', updatedRowData).then((response) => {
+        console.log('API response:', response);
+      });
+    }
+    this.props.api.stopEditing();
+  };
+
+  render() {
+    return (
+      <input
+        type="checkbox"
+        checked={this.state.value}
+        onChange={this.handleChange}
+        onBlur={() => this.props.api.stopEditing()}
+      />
+    );
+  }
+}
+
+export default MyGridComponent;
+```
+
+Please replace `'your-api-url'` with the actual URL of your API endpoint where you want to update the checkbox state. Also, ensure that you've properly installed the required dependencies like `axios`.
+
+This code integrates the header checkbox, cell checkboxes, and handles the POST call to update the API when checkboxes are edited. It should provide the functionality you described.
