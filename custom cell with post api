@@ -1,3 +1,80 @@
+Thank you for clarifying. In that case, you can modify the approach slightly to include buttons for dollars, thousands, and millions. Here's how you can do it:
+
+```tsx
+import React, { useState } from 'react';
+import { AgGridColumn, AgGridReact } from 'ag-grid-react';
+
+function MyComponent() {
+  const [conversionFactor, setConversionFactor] = useState(1); // 1 for dollars, 1000 for thousands, 1000000 for millions
+
+  const topGridData = [...]; // Your top grid data
+  const bottomGridData = [...]; // Your bottom grid data
+
+  const handleToggleDollars = () => {
+    setConversionFactor(1);
+  };
+
+  const handleToggleThousands = () => {
+    setConversionFactor(1000);
+  };
+
+  const handleToggleMillions = () => {
+    setConversionFactor(1000000);
+  };
+
+  return (
+    <div>
+      <button onClick={handleToggleDollars}>$</button>
+      <button onClick={handleToggleThousands}>$K</button>
+      <button onClick={handleToggleMillions}>$M</button>
+
+      <AgGridReact rowData={topGridData}>
+        {/* Define your columns for the top grid */}
+        {/* ... */}
+      </AgGridReact>
+
+      <AgGridReact rowData={bottomGridData}>
+        <AgGridColumn
+          headerName="Column 1"
+          field="column1"
+          cellRenderer={params => {
+            const value = params.value * conversionFactor;
+            return value.toLocaleString('en-US');
+          }}
+        />
+
+        <AgGridColumn
+          headerName="Column 2"
+          field="column2"
+          cellRenderer={params => {
+            const value = params.value * conversionFactor;
+            return value.toLocaleString('en-US');
+          }}
+        />
+
+        {/* ... other columns ... */}
+      </AgGridReact>
+    </div>
+  );
+}
+
+export default MyComponent;
+```
+
+This updated example introduces three buttons for dollars, thousands, and millions. Depending on the button clicked, the `conversionFactor` state is updated accordingly. The cell renderers for the bottom grid multiply the cell values by the `conversionFactor` to achieve the desired conversion.
+
+You can further optimize performance as previously mentioned by utilizing memoization techniques and enabling virtualization if needed. Make sure to adjust the code to fit your specific component structure and requirements.
+
+---------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
 To achieve this functionality, you'll need to implement the following steps:
 
 1. Create a custom cell renderer that includes an input element.
